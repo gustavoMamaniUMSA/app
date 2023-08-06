@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="3500">
+    <!-- duración3s-->
+    <!-- Animación de zoom Comience con el punto central del control en sí, amplíe su propio3Doble talla -->
+    <scale
+        android:fromXScale="1"
+        android:fromYScale="1"
+        android:pivotX="50%"
+        android:pivotY="50%"
+        android:toXScale="8"
+        android:toYScale="8"
+        android:fillAfter="true"
+        android:repeatMode="restart"
+        android:repeatCount="infinite"/>
+
+    <!-- Animación de transparencia de opaco a transparente -->
+    <alpha
+        android:fromAlpha="1"
+        android:toAlpha="0"
+        android:repeatCount="infinite"/>
+
+</set>
