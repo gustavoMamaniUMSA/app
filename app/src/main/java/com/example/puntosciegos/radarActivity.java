@@ -27,7 +27,11 @@ import java.net.Socket;
 
 public class radarActivity extends AppCompatActivity {
 
+    AudioPlayer audioPlayer;
+
     boolean mostrarMenu = false;
+
+    boolean modoVehiculo = false;
     ImageView v_vehiculo,v_motocicleta;
     Button btn_opciones, btn_vehiculo, btn_motocicleta, btn_volver;
     ImageView iv_sensor_derecha_1,iv_sensor_derecha_2, iv_sensor_derecha_3,
@@ -48,7 +52,7 @@ public class radarActivity extends AppCompatActivity {
     Thread myThread;
 
     int guiIzquierda,guiDesactivado,guiDerecha;
-    float sensorIzquierda,sensorAtras,sensorDerecha;
+    float sensorIzquierda = 0,sensorAtras = 0,sensorDerecha = 0;
 
     float antiguoValor = 0;
     int contador = 0;
@@ -60,6 +64,8 @@ public class radarActivity extends AppCompatActivity {
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         myThread = new Thread(myServer);
         myThread.start();
+
+        audioPlayer = new AudioPlayer(this, R.raw.audio_alarma_recortado);
 
         v_vehiculo = (ImageView) findViewById(R.id.v_vehiculo);
         v_motocicleta = (ImageView) findViewById(R.id.v_motocicleta);
@@ -99,14 +105,16 @@ public class radarActivity extends AppCompatActivity {
         int id = item.getItemId();
         if(id == R.id.id_v){
             Toast.makeText(this,"mostrar vehiculo",Toast.LENGTH_SHORT).show();
+            modoVehiculo = true;
         }else if(id == R.id.id_m){
             Toast.makeText(this,"mostrar motocicleta",Toast.LENGTH_SHORT).show();
+            modoVehiculo = false;
         }
         return super.onOptionsItemSelected(item);
     }
 
     public void mostrar(View v){
-        mostrarMenu = !mostrarMenu;
+        modoVehiculo = !modoVehiculo;
         if(mostrarMenu)
             muestraMenu();
         else
@@ -280,7 +288,7 @@ public class radarActivity extends AppCompatActivity {
     public void volver(View v){
         try {
             myServer.mysocket.close();
-            myServer.ss.close();
+            myServer.servidorSocket.close();
             myThread.interrupt();
         }catch(IOException e){
             e.printStackTrace();
@@ -291,8 +299,8 @@ public class radarActivity extends AppCompatActivity {
     public void lectura(String mensaje){
         Log.d("Mensaje: ",mensaje);
         String []lecturaSeparada = mensaje.split(";");
-        for(int i=0; i<lecturaSeparada.length;i++)
-            Log.d("Iteracion: ",lecturaSeparada[i]);
+//        for(int i=0; i<lecturaSeparada.length;i++)
+//            Log.d("Iteracion: ",lecturaSeparada[i]);
         if(mensaje.length() != 0) {
             guiIzquierda = Integer.parseInt(lecturaSeparada[1]);
             guiDesactivado = Integer.parseInt(lecturaSeparada[2]);
@@ -300,6 +308,14 @@ public class radarActivity extends AppCompatActivity {
             sensorIzquierda = Float.parseFloat(lecturaSeparada[4]);
             sensorAtras = Float.parseFloat(lecturaSeparada[5]);
             sensorDerecha = Float.parseFloat(lecturaSeparada[6]);
+
+            // Iniciando audio
+            if (modoVehiculo) {
+                audioPlayer.audioSensorIzquierdo(sensorIzquierda);
+                audioPlayer.audioSensorAtras(sensorAtras);
+                audioPlayer.audioSensorDerecho(sensorDerecha);
+            }
+
             if(guiDesactivado == 1)
                 cambiarColorScanner(0);
             else{
@@ -323,16 +339,16 @@ public class radarActivity extends AppCompatActivity {
 
     class MyServer implements Runnable{
 
-        ServerSocket ss;
+        ServerSocket servidorSocket;
         Socket mysocket;
-        DataInputStream dis;
+        DataInputStream dataInputStream;
         String mensaje;
         Handler handler = new Handler();
 
         @Override
         public void run() {
             try{
-                ss = new ServerSocket(9700);
+                servidorSocket = new ServerSocket(9700);
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
@@ -340,22 +356,23 @@ public class radarActivity extends AppCompatActivity {
                     }
                 });
                 while(true){
-                    mysocket = ss.accept();
-                    dis = new DataInputStream(mysocket.getInputStream());
+                    mysocket = servidorSocket.accept();
+                    dataInputStream = new DataInputStream(mysocket.getInputStream());
                     StringBuffer inputLine = new StringBuffer();
                     String tmp;
                     mensaje="";
-                    while((tmp = dis.readLine()) != null){
+                    while((tmp = dataInputStream.readLine()) != null){
                         inputLine.append(tmp);
                         mensaje = tmp;
                     }
-                    dis.close();
+                    dataInputStream.close();
                     handler.post(new Runnable() {
                         @Override
                         public void run() {
                             //Toast.makeText(getApplicationContext(),"Mensaje recibido del cliente: "+mensaje,Toast.LENGTH_LONG).show();
-                            lectura(mensaje);
-                            Log.d("Mensaje Recibido: ",mensaje);
+                            if(mensaje.length() != 0){
+                                lectura(mensaje);
+                            }
                         }
                     });
                 }
@@ -373,7 +390,7 @@ public class radarActivity extends AppCompatActivity {
     }
 
     class BackgroundTask extends AsyncTask<String,Void,String> {
-        Socket s;
+        Socket socket;
         DataOutputStream dos;
         String ip,mensaje;
 
@@ -382,11 +399,11 @@ public class radarActivity extends AppCompatActivity {
             ip = strings[0];
             mensaje = strings[1];
             try{
-                s = new Socket(ip,9700);
-                dos = new DataOutputStream(s.getOutputStream());
+                socket = new Socket(ip,9700);
+                dos = new DataOutputStream(socket.getOutputStream());
                 dos.writeUTF(mensaje);
                 dos.close();
-                s.close();
+                socket.close();
 
             }catch (IOException e){
                 e.printStackTrace();
@@ -400,7 +417,7 @@ public class radarActivity extends AppCompatActivity {
         if(keyCode==event.KEYCODE_BACK) {
             try {
                 myServer.mysocket.close();
-                myServer.ss.close();
+                myServer.servidorSocket.close();
                 myThread.interrupt();
             }catch(IOException e){
                 e.printStackTrace();
@@ -425,5 +442,13 @@ public class radarActivity extends AppCompatActivity {
             contador = 0;
         }
         antiguoValor = sensorAtras;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (audioPlayer != null) {
+            audioPlayer.release();
+        }
     }
 }
