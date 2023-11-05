@@ -18,7 +18,7 @@ public class AudioPlayer {
     private boolean playPausaAudio(float distancia) {
         if (distancia < 5) {
             if (audioPlayer.isPlaying()) {
-                audioPlayer.stop();
+                audioPlayer.pause();
             }
         }
         if (distancia >= 5 && distancia < 150) {
@@ -33,12 +33,12 @@ public class AudioPlayer {
         }
         if (distancia >= 250 && distancia < 350) {
             if (audioPlayer.isPlaying()) {
-                audioPlayer.stop();
+                audioPlayer.pause();
             }
         }
         if (distancia >= 350) {
             if (audioPlayer.isPlaying()) {
-                audioPlayer.stop();
+                audioPlayer.pause();
             }
         }
         return audioPlayer.isPlaying();

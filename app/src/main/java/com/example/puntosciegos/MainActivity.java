@@ -1,7 +1,6 @@
 package com.example.puntosciegos;
 
 import androidx.appcompat.app.AppCompatActivity;
-
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -14,6 +13,7 @@ import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
 
+    String IP_RED_PROTOTIPO = "192.168.4.";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -22,13 +22,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public boolean verificarConexion(){
-        String ssidWifi = "puntosCiegos";
         WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         WifiInfo info = wifiManager.getConnectionInfo();
-        String ssid  = info.getSSID();
-        Log.d("nombre WIFI: ",ssid);
-        if(ssid.contains(ssidWifi))
+
+        // Obtener la dirección IP en formato entero y luego convertirla a una cadena legible
+        int direccionIp = info.getIpAddress();
+        String ipString = String.format("%d.%d.%d.%d",
+                (direccionIp & 0xff), (direccionIp >> 8 & 0xff),
+                (direccionIp >> 16 & 0xff), (direccionIp >> 24 & 0xff));
+        Log.d("direccion IP: ", ipString);
+
+        if (ipString.contains(this.IP_RED_PROTOTIPO)) {
             return true;
+        }
         return false;
     }
 
