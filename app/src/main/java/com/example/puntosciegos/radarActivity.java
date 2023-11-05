@@ -57,6 +57,8 @@ public class radarActivity extends AppCompatActivity {
     float antiguoValor = 0;
     int contador = 0;
 
+    boolean activarAudio = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -74,8 +76,8 @@ public class radarActivity extends AppCompatActivity {
         btn_motocicleta = (Button) findViewById(R.id.btn_motocicleta);
         btn_volver = (Button) findViewById(R.id.btn_volver);
 
-        v_vehiculo.setVisibility(View.VISIBLE);
-        v_motocicleta.setVisibility(View.GONE);
+        v_vehiculo.setVisibility(View.GONE);
+        v_motocicleta.setVisibility(View.VISIBLE);
 
         iv_sensor_derecha_1 = (ImageView) findViewById(R.id.iv_sensor_derecha_1);
         iv_sensor_derecha_2 = (ImageView) findViewById(R.id.iv_sensor_derecha_2);
@@ -105,16 +107,16 @@ public class radarActivity extends AppCompatActivity {
         int id = item.getItemId();
         if(id == R.id.id_v){
             Toast.makeText(this,"mostrar vehiculo",Toast.LENGTH_SHORT).show();
-            modoVehiculo = true;
+//            modoVehiculo = true;
         }else if(id == R.id.id_m){
             Toast.makeText(this,"mostrar motocicleta",Toast.LENGTH_SHORT).show();
-            modoVehiculo = false;
+//            modoVehiculo = false;
         }
         return super.onOptionsItemSelected(item);
     }
 
     public void mostrar(View v){
-        modoVehiculo = !modoVehiculo;
+        mostrarMenu = !mostrarMenu;
         if(mostrarMenu)
             muestraMenu();
         else
@@ -137,12 +139,14 @@ public class radarActivity extends AppCompatActivity {
         v_vehiculo.setVisibility(View.VISIBLE);
         v_motocicleta.setVisibility(View.GONE);
         ocultaMenu();
+        activarAudio = true;
     }
 
     public void cambiaMotocicleta(View v){
         v_vehiculo.setVisibility(View.GONE);
         v_motocicleta.setVisibility(View.VISIBLE);
         ocultaMenu();
+        activarAudio = false;
     }
 
     public void iniciarScanner(){
@@ -287,8 +291,10 @@ public class radarActivity extends AppCompatActivity {
 
     public void volver(View v){
         try {
-            myServer.mysocket.close();
-            myServer.servidorSocket.close();
+//            myServer.mysocket.close();
+            if (myServer.servidorSocket != null && !myServer.servidorSocket.isClosed()) {
+                myServer.servidorSocket.close();
+            }
             myThread.interrupt();
         }catch(IOException e){
             e.printStackTrace();
@@ -299,8 +305,6 @@ public class radarActivity extends AppCompatActivity {
     public void lectura(String mensaje){
         Log.d("Mensaje: ",mensaje);
         String []lecturaSeparada = mensaje.split(";");
-//        for(int i=0; i<lecturaSeparada.length;i++)
-//            Log.d("Iteracion: ",lecturaSeparada[i]);
         if(mensaje.length() != 0) {
             guiIzquierda = Integer.parseInt(lecturaSeparada[1]);
             guiDesactivado = Integer.parseInt(lecturaSeparada[2]);
@@ -310,7 +314,7 @@ public class radarActivity extends AppCompatActivity {
             sensorDerecha = Float.parseFloat(lecturaSeparada[6]);
 
             // Iniciando audio
-            if (modoVehiculo) {
+            if (activarAudio) {
                 audioPlayer.audioSensorIzquierdo(sensorIzquierda);
                 audioPlayer.audioSensorAtras(sensorAtras);
                 audioPlayer.audioSensorDerecho(sensorDerecha);
@@ -416,8 +420,9 @@ public class radarActivity extends AppCompatActivity {
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if(keyCode==event.KEYCODE_BACK) {
             try {
-                myServer.mysocket.close();
-                myServer.servidorSocket.close();
+                if (myServer.servidorSocket != null && !myServer.servidorSocket.isClosed()) {
+                    myServer.servidorSocket.close();
+                }
                 myThread.interrupt();
             }catch(IOException e){
                 e.printStackTrace();
@@ -447,8 +452,15 @@ public class radarActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (audioPlayer != null) {
-            audioPlayer.release();
+        try {
+            if (audioPlayer != null) {
+                audioPlayer.release();
+            }
+            if (myServer.servidorSocket != null && !myServer.servidorSocket.isClosed()) {
+                myServer.servidorSocket.close();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 }
